@@ -1,0 +1,49 @@
+{% extends 'base.html' %}
+
+{% block title %}Home{% endblock %}
+
+{% block content %}
+    <div class="d-flex justify-content-end mb-3">
+        <a href="{{ request.path }}?refresh=true" class="btn btn-light">
+            🔄 Refresh
+        </a>
+    </div>
+
+    <div class="table-responsive">
+        <table class="table table-striped align-middle">
+            <thead>
+            <tr>
+                <th scope="col">#</th>
+                <th scope="col">Favorite</th>
+                <th scope="col">Enabled</th>
+                <th scope="col">Name</th>
+                <th scope="col">UDM ID</th>
+            </tr>
+            </thead>
+            <tbody>
+            {% for rule in rules %}
+                <tr>
+                    <th scope="row">{{ forloop.counter }}</th>
+                    <td>
+                        <a href="{{ request.path }}?toggle={{ rule.id }}">
+                            {% if rule.favorite %}
+                                <i class="bi bi-star-fill text-warning"></i>
+                            {% else %}
+                                <i class="bi bi-star text-secondary"></i>
+                            {% endif %}
+                        </a>
+                    </td>
+                    <td>
+                        <div class="form-check form-switch">
+                            <input class="form-check-input" type="checkbox" data-toggle="toggle" role="switch"
+                               {% if rule.enabled %}checked{% endif %}>
+                        </div>
+                    </td>
+                    <td>{{ rule.name }}</td>
+                    <td>{{ rule.udm_id }}</td>
+                </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+{% endblock %}

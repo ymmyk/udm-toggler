@@ -1,0 +1,21 @@
+services:
+  udm-toggler:
+    build:
+      context: .  # Path to directory containing Dockerfile
+      dockerfile: Dockerfile
+    container_name: udm-toggler
+    user: "1000:1000"
+    ports:
+      - '8091:8000'
+    volumes:
+      - ./database:/app/database
+    env_file:
+      - ./.env
+    environment:
+      - TZ=America/Chicago
+      - DEBUG=false
+      - HOST_PUBLIC=1
+      - HOST_PORT=8091
+      - HOST_NAME=UDM Toggler
+
+    restart: unless-stopped

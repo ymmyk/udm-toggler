@@ -1,0 +1,35 @@
+{% extends 'base.html' %}
+
+{% block title %}Kids Blocker{% endblock %}
+
+{% block content %}
+    <div class="d-flex justify-content-end mb-3">
+        <a href="{{ request.path }}?refresh=true" class="btn btn-light">
+            🔄 Refresh
+        </a>
+    </div>
+
+    <a href="{{ request.path }}?all=false" class="btn btn-secondary mb-4">
+        Unblock All
+    </a>
+    <a href="{{ request.path }}?all=true" class="btn btn-secondary mb-4">
+        Block All
+    </a>
+
+    {% for rule in rules %}
+        <div class="form-check form-switch big-switch mb-3">
+            <input
+                    class="form-check-input"
+                    type="checkbox"
+                    id="rule-{{ rule.id }}"
+                    role="switch"
+                    {% if rule.enabled %}checked{% endif %}
+                    onchange="location.href='{{ request.path }}?toggle={{ rule.id }}'">
+            <label class="form-check-label ms-2 fs-4" for="rule-{{ rule.id }}">
+                {{ rule.name }} <span
+                    class="fs-0 text-body-secondary">{{ rule.enabled|yesno:'Blocked,Unblocked' }}</span>
+            </label>
+        </div>
+    {% endfor %}
+
+{% endblock %}
