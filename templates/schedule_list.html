@@ -24,7 +24,7 @@
                         <div class="flex-grow-1 min-w-0">
                             <div class="fw-semibold">{{ schedule.name }}</div>
                             <div class="small text-body-secondary">
-                                Turn <strong>{{ schedule.get_action_display }}</strong>
+                                <strong>{{ schedule.get_action_display }}</strong>
                                 at {{ schedule.time|time:"g:i A" }}
                                 &middot;
                                 {% for d, label in days %}{% if d in schedule.days_of_week %}{{ label }}{% if not forloop.last %} {% endif %}{% endif %}{% endfor %}

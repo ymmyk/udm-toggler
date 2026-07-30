@@ -1,5 +1,5 @@
 import requests
-from datetime import datetime, timedelta
+from datetime import timedelta
 from django.utils import timezone
 
 
@@ -12,11 +12,11 @@ class UdmHandler:
 
     def _get_login_cookie(self):
         login_at = self.detail.login_at
-        if not timezone.is_aware(login_at):
+        if login_at and not timezone.is_aware(login_at):
             login_at = timezone.make_aware(login_at)
         if (
                 not self.detail.session_cookie or
-                not self.detail.login_at or
+                not login_at or
                 (timezone.now() - login_at) > timedelta(minutes=COOKIE_EXPIRY_MINUTES)
         ):
             url = f'{BASE_URL}/api/auth/login'
@@ -31,7 +31,7 @@ class UdmHandler:
                 cookie = response.cookies.get_dict()
                 session_cookie = '; '.join([f'{k}={v}' for k, v in cookie.items()])
                 self.detail.session_cookie = session_cookie
-                self.detail.login_at = datetime.now()
+                self.detail.login_at = timezone.now()
                 self.detail.xsrf_cookie = response.headers.get('x-updated-csrf-token')
                 self.detail.save()
                 print(response.json())

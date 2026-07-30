@@ -134,7 +134,10 @@ class ScheduleForm(forms.ModelForm):
         choices=DAYS,
         widget=forms.CheckboxSelectMultiple,
     )
-    time = forms.TimeField(widget=forms.TimeInput(attrs={'type': 'time'}))
+    time = forms.TimeField(widget=forms.TimeInput(
+        attrs={'type': 'time', 'class': 'form-control form-control-lg'},
+        format='%H:%M',
+    ))
     rules = forms.ModelMultipleChoiceField(
         queryset=FirewallRule.objects.filter(favorite=True).order_by('name'),
         widget=forms.CheckboxSelectMultiple,

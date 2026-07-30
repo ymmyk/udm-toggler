@@ -29,9 +29,7 @@
 
         <div class="mb-3">
             <label for="{{ form.time.id_for_label }}" class="form-label">Time</label>
-            <input type="time" name="{{ form.time.name }}" id="{{ form.time.id_for_label }}"
-                   value="{{ form.time.value|default:'' }}"
-                   class="form-control form-control-lg" required>
+            {{ form.time }}
             <div class="form-text">America/Chicago</div>
             {% if form.time.errors %}<div class="text-danger small">{{ form.time.errors|join:", " }}</div>{% endif %}
         </div>

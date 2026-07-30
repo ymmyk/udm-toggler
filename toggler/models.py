@@ -13,8 +13,19 @@ class UserDetail(models.Model):
         return f"{self.user.username} - {self.udm_username}"
 
     @classmethod
+    def shared(cls):
+        """The configured UDM credentials, or None if nothing is set up yet.
+
+        The UDM login belongs to the app rather than to each Django user, so
+        every user shares one record instead of needing their own copy.
+        """
+        return cls.objects.exclude(udm_username='').order_by('pk').first()
+
+    @classmethod
     def fetch(cls, user):
-        detail, _ = cls.objects.get_or_create(user=user)
+        detail = cls.shared()
+        if detail is None:
+            detail, _ = cls.objects.get_or_create(user=user)
         return detail
 
 
@@ -34,8 +45,8 @@ class Schedule(models.Model):
     ACTION_ON = 'on'
     ACTION_OFF = 'off'
     ACTION_CHOICES = [
-        (ACTION_ON, 'On'),
-        (ACTION_OFF, 'Off'),
+        (ACTION_ON, 'Internet On'),
+        (ACTION_OFF, 'Internet Off'),
     ]
 
     name = models.CharField(max_length=100)
@@ -48,3 +59,8 @@ class Schedule(models.Model):
 
     def __str__(self):
         return self.name
+
+    @property
+    def target_rule_enabled(self):
+        # "Internet Off" means the firewall (block) rule should be enabled.
+        return self.action == self.ACTION_OFF

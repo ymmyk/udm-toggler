@@ -38,7 +38,7 @@ def _most_recent_slot(schedule, now_utc):
 
 @shared_task
 def run_due_schedules():
-    detail = UserDetail.objects.first()
+    detail = UserDetail.shared()
     if detail is None:
         return
     handler = UdmHandler(detail)
@@ -51,7 +51,7 @@ def run_due_schedules():
         if schedule.last_ran and schedule.last_ran >= slot:
             continue
 
-        target_state = schedule.action == Schedule.ACTION_ON
+        target_state = schedule.target_rule_enabled
         for rule in schedule.rules.all():
             res = handler.toggle_firewall_rule(rule.udm_id, target_state)
             rule.enabled = res[0].get('enabled')
