@@ -27,4 +27,24 @@ class FirewallRule(models.Model):
     raw = models.JSONField()
 
     def __str__(self):
-        return f"{self.name} (User: {self.user.username})"
+        return self.name
+
+
+class Schedule(models.Model):
+    ACTION_ON = 'on'
+    ACTION_OFF = 'off'
+    ACTION_CHOICES = [
+        (ACTION_ON, 'On'),
+        (ACTION_OFF, 'Off'),
+    ]
+
+    name = models.CharField(max_length=100)
+    action = models.CharField(max_length=3, choices=ACTION_CHOICES)
+    rules = models.ManyToManyField(FirewallRule, related_name='schedules', blank=True)
+    days_of_week = models.JSONField(default=list)
+    time = models.TimeField()
+    is_enabled = models.BooleanField(default=True)
+    last_ran = models.DateTimeField(blank=True, null=True)
+
+    def __str__(self):
+        return self.name

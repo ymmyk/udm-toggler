@@ -5,12 +5,15 @@ name = "pypi"
 
 [packages]
 django = "*"
-rich = "*"
 gunicorn = "*"
 requests = "*"
 python-dotenv = "*"
+celery = "*"
+rich = "*"
+django-celery-beat = "*"
+redis = "*"
 
 [dev-packages]
 
 [requires]
-python_version = "3.12"
+python_version = "3.13"

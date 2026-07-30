@@ -1,12 +1,30 @@
+from datetime import timedelta
+
+from django import forms
 from django.contrib import messages
-from django.shortcuts import render, redirect
 from django.contrib.auth import authenticate, login, logout
-from django.contrib.auth.forms import AuthenticationForm
 from django.contrib.auth.decorators import login_required
+from django.contrib.auth.forms import AuthenticationForm
+from django.shortcuts import get_object_or_404, redirect, render
+from django.urls import reverse
+from django.utils import timezone
 from rich import print
 
-from .models import UserDetail, FirewallRule
 from .handler import UdmHandler
+from .models import FirewallRule, Schedule, UserDetail
+from .tasks import WINDOW_MINUTES
+
+
+DAYS = [
+    (0, 'Mon'),
+    (1, 'Tue'),
+    (2, 'Wed'),
+    (3, 'Thu'),
+    (4, 'Fri'),
+    (5, 'Sat'),
+    (6, 'Sun'),
+]
+
 
 def custom_login_view(request):
     if request.user.is_authenticated:
@@ -107,6 +125,70 @@ def configure(request):
             messages.error(request, 'Firewall rule not found')
         return redirect(request.path)
 
-
     all_rules = FirewallRule.objects.all().order_by('name')
     return render(request, 'configure.html', {'rules': all_rules})
+
+
+class ScheduleForm(forms.ModelForm):
+    days_of_week = forms.MultipleChoiceField(
+        choices=DAYS,
+        widget=forms.CheckboxSelectMultiple,
+    )
+    time = forms.TimeField(widget=forms.TimeInput(attrs={'type': 'time'}))
+    rules = forms.ModelMultipleChoiceField(
+        queryset=FirewallRule.objects.filter(favorite=True).order_by('name'),
+        widget=forms.CheckboxSelectMultiple,
+        required=False,
+    )
+
+    class Meta:
+        model = Schedule
+        fields = ['name', 'action', 'rules', 'days_of_week', 'time', 'is_enabled']
+
+    def clean_days_of_week(self):
+        return [int(d) for d in self.cleaned_data['days_of_week']]
+
+
+@login_required(login_url='/login/')
+def schedule_list(request):
+    if sched_id := request.GET.get('toggle'):
+        schedule = get_object_or_404(Schedule, id=sched_id)
+        schedule.is_enabled = not schedule.is_enabled
+        if schedule.is_enabled:
+            schedule.last_ran = timezone.now() - timedelta(minutes=WINDOW_MINUTES)
+        schedule.save(update_fields=['is_enabled', 'last_ran'])
+        return redirect(request.path)
+
+    if sched_id := request.GET.get('delete'):
+        Schedule.objects.filter(id=sched_id).delete()
+        messages.success(request, 'Schedule deleted')
+        return redirect(request.path)
+
+    schedules = Schedule.objects.all().order_by('name')
+    return render(request, 'schedule_list.html', {
+        'schedules': schedules,
+        'days': DAYS,
+    })
+
+
+@login_required(login_url='/login/')
+def schedule_edit(request, sched_id=None):
+    instance = get_object_or_404(Schedule, id=sched_id) if sched_id else None
+
+    if request.method == 'POST':
+        form = ScheduleForm(request.POST, instance=instance)
+        if form.is_valid():
+            schedule = form.save(commit=False)
+            if instance is None and schedule.is_enabled:
+                schedule.last_ran = timezone.now() - timedelta(minutes=WINDOW_MINUTES)
+            schedule.save()
+            form.save_m2m()
+            messages.success(request, 'Schedule saved')
+            return redirect(reverse('toggler-schedule-list'))
+    else:
+        form = ScheduleForm(instance=instance)
+
+    return render(request, 'schedule_form.html', {
+        'form': form,
+        'schedule': instance,
+    })

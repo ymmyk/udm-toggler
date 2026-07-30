@@ -27,7 +27,7 @@
                     onchange="location.href='{{ request.path }}?toggle={{ rule.id }}'">
             <label class="form-check-label ms-2 fs-4" for="rule-{{ rule.id }}">
                 {{ rule.name }} <span
-                    class="fs-0 text-body-secondary">{{ rule.enabled|yesno:'Blocked,Unblocked' }}</span>
+                    class="fs-0 text-body-secondary">{{ rule.enabled|yesno:'🚫,✅' }}</span>
             </label>
         </div>
     {% endfor %}
