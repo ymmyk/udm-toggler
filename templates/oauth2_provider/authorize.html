@@ -1,0 +1,38 @@
+{% extends 'base.html' %}
+
+{% block title %}Authorize{% endblock %}
+
+{% block content %}
+    <div class="card shadow-sm mx-auto p-4" style="max-width: 480px;">
+        {% if not error %}
+            <form id="authorizationForm" method="post">
+                {% csrf_token %}
+                {% for field in form %}
+                    {% if field.is_hidden %}{{ field }}{% endif %}
+                {% endfor %}
+
+                <h4 class="mb-3">Allow {{ application.name|default:'this app' }}?</h4>
+                <p>It is asking to:</p>
+                <ul>
+                    {% for scope in scopes_descriptions %}
+                        <li>{{ scope }}</li>
+                    {% endfor %}
+                </ul>
+                <p class="text-body-secondary small">
+                    After approving you'll be sent to {{ form.redirect_uri.value }}
+                </p>
+
+                {{ form.errors }}
+                {{ form.non_field_errors }}
+
+                <div class="d-flex gap-2 justify-content-end">
+                    <input type="submit" class="btn btn-outline-secondary" value="Cancel">
+                    <input type="submit" class="btn btn-primary" name="allow" value="Allow">
+                </div>
+            </form>
+        {% else %}
+            <h4>Error: {{ error.error }}</h4>
+            <p>{{ error.description }}</p>
+        {% endif %}
+    </div>
+{% endblock %}

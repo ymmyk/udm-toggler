@@ -8,10 +8,12 @@ from django.contrib.auth.forms import AuthenticationForm
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.utils import timezone
+from django.utils.http import url_has_allowed_host_and_scheme
 from rich import print
 
 from .handler import UdmHandler
 from .models import FirewallRule, Schedule, UserDetail
+from .services import set_rule_enabled, set_schedule_enabled, sync_rules
 from .tasks import WINDOW_MINUTES
 
 
@@ -26,16 +28,25 @@ DAYS = [
 ]
 
 
+def _next_url(request):
+    # Lets the OAuth authorize page send people through login and back.
+    url = request.POST.get('next') or request.GET.get('next')
+    if url and url_has_allowed_host_and_scheme(
+            url, allowed_hosts={request.get_host()}, require_https=request.is_secure()):
+        return url
+    return '/'
+
+
 def custom_login_view(request):
     if request.user.is_authenticated:
-        return redirect('/')
+        return redirect(_next_url(request))
 
     if request.method == 'POST':
         form = AuthenticationForm(request, data=request.POST)
         if form.is_valid():
             user = form.get_user()
             login(request, user)
-            return redirect('/')
+            return redirect(_next_url(request))
     else:
         form = AuthenticationForm()
 
@@ -48,24 +59,7 @@ def custom_logout_view(request):
 
 
 def _refresh_udm(request, handler):
-    rules = handler.get_firewall_rules()
-    ids = set()
-    for rule in rules:
-        if rule.get('predefined'):
-            continue
-
-        fw, _ = FirewallRule.objects.get_or_create(udm_id=rule.get('_id'), defaults=dict(
-            name=rule.get('name'),
-            raw=rule,
-        ))
-        ids.add(fw.id)
-        if fw.enabled != rule.get('enabled'):
-            fw.enabled = rule.get('enabled')
-            fw.save(update_fields=['enabled'])
-        if fw.name != rule.get('name'):
-            fw.name = rule.get('name')
-            fw.save(update_fields=['name'])
-    FirewallRule.objects.exclude(pk__in=ids).delete()
+    sync_rules(handler)
     messages.success(request, 'Firewall rules updated')
 
 
@@ -85,17 +79,12 @@ def home(request):
     if block_all:
         block_all = block_all == 'true'
         for rule in all_rules:
-            res = handler.toggle_firewall_rule(rule.udm_id, block_all)
-            rule.enabled = res[0].get('enabled')
-            rule.save(update_fields=['enabled'])
+            set_rule_enabled(handler, rule, block_all)
 
     if rule_id := request.GET.get('toggle'):
         try:
             rule = FirewallRule.objects.get(id=rule_id)
-            rule.enabled = not rule.enabled
-            res = handler.toggle_firewall_rule(rule.udm_id, rule.enabled)
-            rule.enabled = res[0].get('enabled')
-            rule.save(update_fields=['enabled'])
+            set_rule_enabled(handler, rule, not rule.enabled)
         except Exception as e:
             messages.error(request, str(e))
         return redirect(request.path)
@@ -156,10 +145,7 @@ class ScheduleForm(forms.ModelForm):
 def schedule_list(request):
     if sched_id := request.GET.get('toggle'):
         schedule = get_object_or_404(Schedule, id=sched_id)
-        schedule.is_enabled = not schedule.is_enabled
-        if schedule.is_enabled:
-            schedule.last_ran = timezone.now() - timedelta(minutes=WINDOW_MINUTES)
-        schedule.save(update_fields=['is_enabled', 'last_ran'])
+        set_schedule_enabled(schedule, not schedule.is_enabled)
         return redirect(request.path)
 
     if sched_id := request.GET.get('delete'):

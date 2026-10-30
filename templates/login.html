@@ -12,6 +12,7 @@
     <div class="card shadow p-4" style="min-width: 350px;">
         <h4 class="mb-3 text-center">Login</h4>
         <form method="post" novalidate>
+            <input type="hidden" name="next" value="{{ request.GET.next }}">
             {% csrf_token %}
             {% if form.non_field_errors %}
                 <div class="alert alert-danger" role="alert">

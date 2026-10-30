@@ -26,7 +26,6 @@ SECRET_KEY = os.getenv('SECRET_KEY', 'GENERATE_A_RANDOM_SECRET_KEY')
 ALLOWED_HOSTS = os.getenv('ALLOWED_HOSTS', 'localhost').split(',')
 CSRF_TRUSTED_ORIGINS = os.getenv('CSRF_TRUSTED_ORIGINS', 'http://localhost').split(',')
 DEBUG = os.getenv('DEBUG', 'true').lower() == 'true'
-DEBUG = True
 
 # Application definition
 
@@ -39,7 +38,32 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'toggler',
     'django_celery_beat',
+    'oauth2_provider',
 ]
+
+LOGIN_URL = '/login/'
+
+# Behind the Nginx proxy, so OAuth metadata and redirect URLs come out as
+# https. Nginx must send `proxy_set_header X-Forwarded-Proto $scheme;`.
+SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+
+# OAuth for the /mcp endpoint. MCP clients register themselves (RFC 7591)
+# and use the authorization-code flow with PKCE; a logged-in user still has
+# to approve each client on the consent page.
+OAUTH2_PROVIDER = {
+    'SCOPES': {'mcp': 'Turn the internet on and off and manage schedules'},
+    'DEFAULT_SCOPES': ['mcp'],
+    'PKCE_REQUIRED': True,
+    'ACCESS_TOKEN_EXPIRE_SECONDS': 60 * 60,
+    'REFRESH_TOKEN_EXPIRE_SECONDS': 60 * 60 * 24 * 90,
+    'ROTATE_REFRESH_TOKEN': True,
+    'DCR_ENABLED': True,
+    'DCR_REGISTRATION_PERMISSION_CLASSES': ('toggler.oauth.AuthorizationCodeOnlyDCRPermission',),
+    'OAUTH2_VALIDATOR_CLASS': 'toggler.oauth.Validator',
+    'COMPLIANT_BCP_RFC9700_IMPLICIT_GRANT': True,
+    'COMPLIANT_BCP_RFC9700_PASSWORD_GRANT': True,
+    'OAUTH2_PROTECTED_RESOURCE_NAME': 'UDM Toggler',
+}
 
 # Internationalization
 # https://docs.djangoproject.com/en/4.2/topics/i18n/
@@ -65,6 +89,7 @@ CELERY_TIMEZONE = TIME_ZONE
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
+    'whitenoise.middleware.WhiteNoiseMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
@@ -141,6 +166,7 @@ USE_TZ = True
 
 STATIC_URL = 'static/'
 STATIC_ROOT = BASE_DIR / 'staticfiles'
+STATICFILES_DIRS = [BASE_DIR / 'static']
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/4.2/ref/settings/#default-auto-field

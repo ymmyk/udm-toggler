@@ -19,10 +19,31 @@ from django.contrib import admin
 from django.urls import path, include
 from django.conf import settings
 from django.conf.urls.static import static
+from django.http import HttpResponseForbidden
+from oauth2_provider import urls as oauth2_urls
 
+from toggler.mcp import mcp_endpoint
+
+
+# Only the pieces of django-oauth-toolkit an MCP client needs; the
+# application-management pages stay in the Django admin.
+OAUTH2_ENDPOINTS = {'authorize', 'token', 'revoke-token', 'dcr-register'}
+oauth2_patterns = oauth2_urls.metadata_urlpatterns + [
+    path('o/', include([
+        p for p in oauth2_urls.base_urlpatterns + oauth2_urls.dcr_urlpatterns
+        if p.name in OAUTH2_ENDPOINTS
+    ] + [
+        # Registration responses link here, but self-registered clients may
+        # not edit themselves (e.g. to add the client_credentials grant).
+        path('register/<str:client_id>/', lambda request, client_id: HttpResponseForbidden(),
+             name='dcr-register-management'),
+    ])),
+]
 
 urlpatterns = [
     path('admin/', admin.site.urls),
+    path('', include((oauth2_patterns, 'oauth2_provider'))),
+    path('mcp', mcp_endpoint, name='mcp'),
      path('', include('toggler.urls')),
 ]
 
